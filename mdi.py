@@ -4,6 +4,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait as wait
 from selenium.webdriver.support import expected_conditions as EC
+import base64
 
 # https://stackoverflow.com/questions/52327098/how-to-wait-iframe-page-load-in-selenium
 
@@ -18,10 +19,33 @@ T_V_KORT = 0.07
 QUIZZ_LADD_TIMEOUT = 30
 
 
+def kryptera(key, strang):
+    krypt_chars = []
+    for i in range(len(strang)):
+        key_c = key[i % len(key)]
+        krypt_c = chr(ord(strang[i]) + ord(key_c) % 256)
+        krypt_chars.append(krypt_c)
+    krypt_strang = "".join(krypt_chars)
+    return krypt_strang
+
+
+def dekrypt(key, strang):
+    krypt_chars = []
+    for i in range(len(strang)):
+        key_c = key[i % len(key)]
+        krypt_c = chr(ord(strang[i]) - ord(key_c) % 256)
+        krypt_chars.append(krypt_c)
+    krypt_strang = "".join(krypt_chars)
+    return krypt_strang
+
+
 KTH_ID = "rmarte"
 KTH_PWRD = "lmao jag kommer inte skriva mitt lösen här"
 PATH = "C:\Program Files\Selenium\chromedriver.exe"
 COOKIE_ID = ""
+CANVAS_LANK = "https://kth.instructure.com/courses/21375/assignments/147180/submissions/94958"
+# CANVAS_LANK = "https://kth.instructure.com/courses/21375/assignments/147162/submissions/94959"
+
 
 # with open("svar.csv", "w", newline="") as csvfile:
 #     answer_csv = csv.writer(csvfile, delimiter=" ", quotechar="|", quoting=csv.QUOTE_MINIMAL)
@@ -33,9 +57,11 @@ def hämta_personuppgifter():
     global KTH_ID
     global KTH_PWRD
     global PATH
-    KTH_ID = input("vad är ditt kth-id?") or "rmarte"
-    KTH_PWRD = input("vad är ditt kth-lösenord?") or "kxGF43242sWs"
-    PATH = input("skriv in din path till chromedriver") or "C:\Program Files\Selenium\chromedriver.exe"
+    global CANVAS_LANK
+    KTH_ID = input("vad är ditt kth-id? ") or "rmarte"
+    KTH_PWRD = input("vad är ditt kth-lösenord? ") or "ne!"
+    PATH = input("skriv in din path till chromedriver: ") or "C:\Program Files\Selenium\chromedriver.exe"
+    CANVAS_LANK = input("skriv in länk till quizzet: ") or "https://kth.instructure.com/courses/21375/assignments/147180/submissions/94959"
     # print(KTH_ID, KTH_PWRD, PATH)
 
 
@@ -112,7 +138,7 @@ def starta_nu(driver):
 def fixa_svar(driver):
     global cheat_cheet
     time.sleep(T_KORT)
-    while len(driver.find_elements_by_class_name("cQHeE_ebwZ")) < 11:
+    while len(driver.find_elements_by_class_name("cQHeE_ebwZ")) < 2:
         continue
     fråge_matris = driver.find_elements_by_class_name("cQHeE_ebwZ")
     # print(fråge_matris)
@@ -130,23 +156,36 @@ def fixa_svar(driver):
 
         # for i in text_rader:
         #     print(i)
-
+        hej = "hej".splitlines(1)
         # === välj rätt svar === #
         if len(svar_ikån) > 0:  # vi valde redan rätt svar
             rätt_svar = svar_ikån[0].find_element_by_xpath("./../../..").text
-            rätt_svar = rätt_svar.splitlines()[1]
+            # print("rätt svar:", rätt_svar, "0")
+            # print("EEE", rätt_svar)
+            rätt_svar = rätt_svar.splitlines()
+            rätt_svar = rätt_svar[1]
+
         else:  # vi valde fel
+            # for rad in text_rader:
+            #     print(rad)
+            #     if rad == "":
+            #         print("Ö")
+            #     if rad == " ":
+            #         print("Å")
+            #     print("längd:", len(rad))
+
+            text_rader = list(filter(lambda x: (len(x) > 1), text_rader))
+
             rätt_svar = max(text_rader, key=text_rader.count)
 
         # === printar === #
-        print(frågeställning)
-        print(rätt_svar)
+        print("fråga:", frågeställning)
+        print("svar: ", rätt_svar)
         cheat_cheet[frågeställning] = rätt_svar
 
     w = csv.writer(open("output.csv", "w"))
     for key, val in cheat_cheet.items():
         w.writerow([key, val])
-
     return
 
 
@@ -167,20 +206,23 @@ def gör_frågor(driver, frågor):
         # hitta alla <p>
         p_tags = fråga.find_elements_by_tag_name("p")
         # print("rätt svar på frågan:", cheat_cheet[p_tags[0].text])
+        count = 0
         for i in p_tags:
+            count += 1
             if cheat_cheet[p_tags[0].text] == i.text:
                 time.sleep(T_V_KORT)
                 print("-> ", end="")
                 i.click()
-            print(i.text)
+            print(i.text, "/n")
 
         # min_knapp = fråga.find_element_by_class_name("fNHEA_bOnW")
         # print(min_knapp.text)
         # min_knapp.click()
+
         time.sleep(T_V_KORT)
 
+    # time.sleep(999)
     färdig_frågor(driver)
-
     return
 
 
@@ -204,7 +246,7 @@ def slumpa_frågor(driver, frågor):
         p_tags[1].click()
         for i in p_tags:
             if i == p_tags[1]:
-                print("-? ", end="")
+                print("?-> ", end="")
             print(i.text)
 
         # min_knapp = fråga.find_element_by_class_name("fNHEA_bOnW")
@@ -251,7 +293,7 @@ def main():
 
     driver = webdriver.Chrome(PATH)
 
-    sida_länk = "https://kth.instructure.com/courses/21375/assignments/147162/submissions/94959"
+    sida_länk = CANVAS_LANK
 
     driver.get(sida_länk)
     print(driver.title)
@@ -276,6 +318,7 @@ def main():
 
     # === gör frågor på riktigt === #
     frågor = klicka_runt(driver)
+    print("gör frågor på riktigt...")
     gör_frågor(driver, frågor)
 
     time.sleep(50)
