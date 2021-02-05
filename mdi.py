@@ -19,6 +19,13 @@ T_V_KORT = 0.07
 QUIZZ_LADD_TIMEOUT = 30
 
 
+def fetcha_uppgifter():
+    try:
+        inlogg = open("inlogg.txt")
+    except IOError:
+        print("synd")
+
+
 def kryptera(key, strang):
     krypt_chars = []
     for i in range(len(strang)):
