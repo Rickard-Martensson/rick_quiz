@@ -2,7 +2,7 @@
 Solves mdi and other canvas quizzes automatically
 
 
-![Hejhallå](preview_rickquiz_gif.gif)
+![Hejhallå](preview_rickquiz_hq.gif)
 
 
 <video width="320" height="240" controls>
